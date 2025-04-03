@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../utils/app_theme.dart'; // Add this import
 
 class BookingsPage extends StatefulWidget {
@@ -155,9 +157,43 @@ class _BookingsPageState extends State<BookingsPage> {
     }
   }
 
+  Future<String> _getCurrentAddress() async {
+    // Request permission
+    LocationPermission permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      return '';
+    }
+
+    try {
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Convert position to address
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        return '${place.street}, ${place.subLocality}, ${place.locality}, ${place.postalCode}';
+      }
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+    }
+    return '';
+  }
+
   void _showProviderDetails(
       BuildContext context, Map<String, dynamic> bookingData) async {
     final TextEditingController addressController = TextEditingController();
+
+    // Get current address
+    String currentAddress = await _getCurrentAddress();
+    addressController.text = currentAddress;
+
     List<String> selectedPurposes = [];
 
     final providerDoc = await FirebaseFirestore.instance
@@ -505,85 +541,138 @@ class _BookingsPageState extends State<BookingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Bookings'),
+        title: const Text('Booking History'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF4E54C8),
+        elevation: 0,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('customers')
-            .doc(FirebaseAuth.instance.currentUser?.uid)
-            .collection('bookings')
-            .orderBy('bookingDate', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No bookings yet'));
-          }
-
-          return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              var bookingDoc = snapshot.data!.docs[index];
-              var bookingData = bookingDoc.data() as Map<String, dynamic>;
-              bookingData['id'] = bookingDoc.id; // Add document ID to the data
-
-              return Dismissible(
-                // Wrap BookingCard with Dismissible
-                key: Key(bookingData['id']),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20.0),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                onDismissed: (direction) {
-                  _deleteBooking(context, bookingData['id']);
-                },
-                confirmDismiss: (direction) async {
-                  return await showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Delete Booking?'),
-                      content: const Text(
-                          'Are you sure you want to remove this booking?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          style:
-                              TextButton.styleFrom(foregroundColor: Colors.red),
-                          child: const Text('Delete'),
-                        ),
-                      ],
+      body: RefreshIndicator(
+        color: const Color(0xFF4E54C8),
+        onRefresh: () async {
+          // Add pull-to-refresh functionality
+          setState(() {});
+          await Future.delayed(const Duration(seconds: 1));
+        },
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('customers')
+              .doc(FirebaseAuth.instance.currentUser?.uid)
+              .collection('bookings')
+              .orderBy('bookingDate', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Something went wrong',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 16),
                     ),
-                  );
-                },
-                child: BookingCard(
-                  serviceProvider: bookingData['providerName'] ?? '',
-                  serviceType: bookingData['serviceType'] ?? '',
-                  bookingDate:
-                      (bookingData['bookingDate'] as Timestamp).toDate(),
-                  status: bookingData['status'] ?? '',
-                  bookingId: bookingDoc.id,
-                  onTap: () => _showProviderDetails(context, bookingData),
-                  bookingData: bookingData, // Add this
-                  onRateService: _showRatingDialog, // Add this
+                  ],
                 ),
               );
-            },
-          );
-        },
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: Color(0xFF4E54C8)),
+              );
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.history_outlined,
+                      size: 120,
+                      color: const Color(0xFF4E54C8).withOpacity(0.3),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'No bookings yet',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      'Your booking history will appear here',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                var bookingDoc = snapshot.data!.docs[index];
+                var bookingData = bookingDoc.data() as Map<String, dynamic>;
+                bookingData['id'] =
+                    bookingDoc.id; // Add document ID to the data
+
+                return Dismissible(
+                  // Wrap BookingCard with Dismissible
+                  key: Key(bookingData['id']),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20.0),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  onDismissed: (direction) {
+                    _deleteBooking(context, bookingData['id']);
+                  },
+                  confirmDismiss: (direction) async {
+                    return await showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Booking?'),
+                        content: const Text(
+                            'Are you sure you want to remove this booking?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: TextButton.styleFrom(
+                                foregroundColor: Colors.red),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: BookingCard(
+                    serviceProvider: bookingData['providerName'] ?? '',
+                    serviceType: bookingData['serviceType'] ?? '',
+                    bookingDate:
+                        (bookingData['bookingDate'] as Timestamp).toDate(),
+                    status: bookingData['status'] ?? '',
+                    bookingId: bookingDoc.id,
+                    onTap: () => _showProviderDetails(context, bookingData),
+                    bookingData: bookingData, // Add this
+                    onRateService: _showRatingDialog, // Add this
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ExplorePage extends StatefulWidget {
-  // Change to StatefulWidget
   const ExplorePage({super.key});
 
   @override
@@ -26,6 +25,17 @@ class _ExplorePageState extends State<ExplorePage>
     'Moving',
     'More',
   ];
+
+  final Map<String, Color> serviceColors = {
+    'Cleaning': Color(0xFF4CAF50), // Green
+    'Plumbing': Color(0xFF2196F3), // Blue
+    'Electrical': Color(0xFFFFC107), // Amber
+    'Painting': Color(0xFFE91E63), // Pink
+    'Carpentry': Color(0xFF795548), // Brown
+    'Gardening': Color(0xFF8BC34A), // Light Green
+    'Moving': Color(0xFF9C27B0), // Purple
+    'More': Color(0xFF607D8B), // Blue Grey
+  };
 
   late AnimationController _controller;
   late Animation<double> _animation;
@@ -50,24 +60,36 @@ class _ExplorePageState extends State<ExplorePage>
     super.dispose();
   }
 
-  Stream<QuerySnapshot> _getProvidersStream() {
-    var query = FirebaseFirestore.instance
+  Stream<List<DocumentSnapshot>> _getProvidersStream() {
+    Query query = FirebaseFirestore.instance
         .collection('serviceProviders')
         .orderBy('rating', descending: true);
 
+    // If category is selected, filter by services
     if (selectedCategory != null && selectedCategory != 'More') {
-      print('Querying for category: $selectedCategory'); // Debug print
-      return FirebaseFirestore.instance
-          .collection('serviceProviders')
-          .where('services', arrayContains: selectedCategory)
-          .snapshots();
+      query = query.where('services', arrayContains: selectedCategory);
     }
 
-    print('Querying all providers'); // Debug print
-    return query.snapshots();
+    return query.snapshots().map((snapshot) {
+      if (searchQuery.isEmpty) return snapshot.docs;
+
+      // Client-side filtering for search
+      String searchLower = searchQuery.toLowerCase();
+      return snapshot.docs.where((doc) {
+        var data = doc.data() as Map<String, dynamic>;
+        String name = (data['name'] ?? '').toLowerCase();
+        String businessName = (data['businessName'] ?? '').toLowerCase();
+        String services = (data['services'] as List?)
+                ?.map((s) => s.toString().toLowerCase())
+                .join(' ') ??
+            '';
+        return name.contains(searchLower) ||
+            businessName.contains(searchLower) ||
+            services.contains(searchLower);
+      }).toList();
+    });
   }
 
-  // Update the onCategory selected method
   void _onCategorySelected(String category) {
     print('Category selected: $category'); // Debug print
     setState(() {
@@ -79,7 +101,6 @@ class _ExplorePageState extends State<ExplorePage>
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Check if booking already exists
         final bookingsRef = FirebaseFirestore.instance
             .collection('customers')
             .doc(user.uid)
@@ -105,7 +126,6 @@ class _ExplorePageState extends State<ExplorePage>
 
         final providerData = provider.data() as Map<String, dynamic>;
 
-        // Add new booking
         await bookingsRef.add({
           'providerName': providerData['businessName'],
           'providerId': provider.id,
@@ -119,7 +139,6 @@ class _ExplorePageState extends State<ExplorePage>
           'providerPhone': providerData['mobileNumber'],
         });
 
-        // Show success message
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -179,10 +198,14 @@ class _ExplorePageState extends State<ExplorePage>
             : null,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: Icon(isSearching ? Icons.close : Icons.search),
             onPressed: () {
               setState(() {
                 isSearching = !isSearching;
+                if (!isSearching) {
+                  // Clear search query when closing search
+                  searchQuery = '';
+                }
               });
             },
           ),
@@ -193,21 +216,22 @@ class _ExplorePageState extends State<ExplorePage>
           if (!isSearching && selectedCategory == null)
             Container(
               height: 130,
-              margin:
-                  const EdgeInsets.only(top: 24, bottom: 16), // Update margin
+              margin: const EdgeInsets.only(top: 24, bottom: 16),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
                   final category = categories[index];
+                  final color =
+                      serviceColors[category] ?? const Color(0xFF4E54C8);
+
                   return AnimatedBuilder(
                     animation: _animation,
                     builder: (context, child) => Transform.scale(
                       scale: 1.0 + (_animation.value * 0.03),
                       child: Container(
-                        margin: const EdgeInsets.only(
-                            right: 16, top: 8), // Add top margin
+                        margin: const EdgeInsets.only(right: 16, top: 8),
                         child: GestureDetector(
                           onTap: () => _onCategorySelected(category),
                           child: Column(
@@ -216,26 +240,24 @@ class _ExplorePageState extends State<ExplorePage>
                                 width: 70,
                                 height: 70,
                                 decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF4E54C8).withOpacity(0.1),
+                                  color: color.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: const Color(0xFF4E54C8)
-                                        .withOpacity(0.2),
+                                    color: color.withOpacity(0.3),
                                   ),
                                 ),
                                 child: Icon(
                                   _getCategoryIcon(category),
-                                  color: const Color(0xFF4E54C8),
+                                  color: color,
                                   size: 32,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 category,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: Color(0xFF4E54C8),
+                                  color: color,
                                 ),
                               ),
                             ],
@@ -266,13 +288,12 @@ class _ExplorePageState extends State<ExplorePage>
               ),
             ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
+            child: StreamBuilder<List<DocumentSnapshot>>(
               stream: _getProvidersStream(),
               builder: (context, snapshot) {
-                // Add debug prints
                 print('Stream builder state: ${snapshot.connectionState}');
                 if (snapshot.hasData) {
-                  print('Number of docs: ${snapshot.data!.docs.length}');
+                  print('Number of docs: ${snapshot.data!.length}');
                 }
 
                 if (snapshot.hasError) {
@@ -283,13 +304,13 @@ class _ExplorePageState extends State<ExplorePage>
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (snapshot.data!.docs.isEmpty) {
+                if (snapshot.data!.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset(
-                          'assets/images/Sad-512.jpg', // Add this image
+                          'assets/images/Sad-512.jpg',
                           height: 120,
                           width: 120,
                         ),
@@ -321,13 +342,10 @@ class _ExplorePageState extends State<ExplorePage>
 
                 return ListView.builder(
                   padding: const EdgeInsets.only(
-                      left: 16,
-                      right: 16,
-                      top: 24, // Add top padding
-                      bottom: 16),
-                  itemCount: snapshot.data!.docs.length,
+                      left: 16, right: 16, top: 24, bottom: 16),
+                  itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
-                    DocumentSnapshot provider = snapshot.data!.docs[index];
+                    DocumentSnapshot provider = snapshot.data![index];
                     Map<String, dynamic> providerData =
                         provider.data() as Map<String, dynamic>;
                     List<String> services =
@@ -381,7 +399,6 @@ class _ExplorePageState extends State<ExplorePage>
                 const SizedBox(height: 8),
                 Text('Provider: ${providerData['name']}'),
                 Text('Mobile: ${providerData['mobileNumber']}'),
-                // Add location/area field
                 Text('Area: ${providerData['location'] ?? 'Not specified'}'),
                 const SizedBox(height: 16),
                 const Text(
@@ -451,12 +468,11 @@ class _ExplorePageState extends State<ExplorePage>
 
   void _onSearchChanged(String query) {
     setState(() {
-      searchQuery = query;
+      searchQuery = query.trim();
     });
   }
 }
 
-// Update ServiceProviderCard to include onTap
 class ServiceProviderCard extends StatelessWidget {
   final String name;
   final String businessName;

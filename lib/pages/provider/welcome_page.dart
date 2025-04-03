@@ -171,52 +171,50 @@ class _ProviderWelcomePageState extends State<ProviderWelcomePage>
                       position: _slideAnimation,
                       child: FadeTransition(
                         opacity: _fadeInAnimation,
-                        child: Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 5),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/home_remodeling_website_design.jpg',
+                                height: 220,
+                                fit: BoxFit.contain,
+                              ),
+                              const SizedBox(height: 30),
+                              const Text(
+                                'Manage Your Business',
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF4E54C8),
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/images/home_remodeling_website_design.jpg',
-                                  height: 220,
-                                  fit: BoxFit.contain,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Track your service requests and manage bookings efficiently',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                  height: 1.5,
                                 ),
-                                const SizedBox(height: 30),
-                                const Text(
-                                  'Manage Your Business',
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF4E54C8),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Track your service requests and manage bookings efficiently',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    height: 1.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 30),
-                                _buildStatsRow(userData),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 30),
+                              _buildStatsRow(userData),
+                            ],
                           ),
                         ),
                       ),
@@ -234,7 +232,6 @@ class _ProviderWelcomePageState extends State<ProviderWelcomePage>
   Widget _buildStatsRow(Map<String, dynamic> userData) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      
     );
   }
 }

@@ -220,8 +220,17 @@ class BookingsHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Bookings History'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Bookings History',
+          style: TextStyle(
+            color: Color(0xFF4E54C8),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -232,42 +241,101 @@ class BookingsHistoryPage extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Something went wrong',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                  ),
+                ],
+              ),
+            );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF4E54C8)),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No booking history'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.history_outlined,
+                    size: 120,
+                    color: Color(0xFF4E54C8).withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'No booking history yet',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'Completed bookings will appear here',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               final booking = snapshot.data!.docs[index];
               final bookingData = booking.data() as Map<String, dynamic>;
               bookingData['id'] = booking.id;
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
                 child: Dismissible(
                   key: Key(bookingData['id']),
                   direction: DismissDirection.endToStart,
                   background: Container(
-                    color: Colors.red,
+                    decoration: BoxDecoration(
+                      color: Colors.red[400],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20.0),
+                    padding: const EdgeInsets.only(right: 20),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
                   confirmDismiss: (direction) async {
                     return await showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         title: const Text('Delete Booking?'),
-                        content: const Text(
-                            'Are you sure you want to remove this booking from history?'),
+                        content:
+                            const Text('Remove this booking from history?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
@@ -283,30 +351,91 @@ class BookingsHistoryPage extends StatelessWidget {
                       ),
                     );
                   },
-                  onDismissed: (direction) {
-                    _deleteBooking(context, bookingData['id']);
-                  },
-                  child: ListTile(
+                  onDismissed: (direction) =>
+                      _deleteBooking(context, bookingData['id']),
+                  child: InkWell(
                     onTap: () => _showBookingDetails(context, bookingData),
-                    title: Text(bookingData['customerName'] ?? ''),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(bookingData['serviceType'] ?? ''),
-                        Text(bookingData['serviceAddress'] ?? ''),
-                        Text(
-                            'Date: ${_formatDate(bookingData['bookingDate'] as Timestamp)}'),
-                      ],
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(bookingData['status']),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        bookingData['status'] ?? '',
-                        style: const TextStyle(color: Colors.white),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 25,
+                                backgroundColor: const Color(0xFF4E54C8),
+                                child: Text(
+                                  bookingData['customerName']?.isNotEmpty ==
+                                          true
+                                      ? bookingData['customerName'][0]
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      bookingData['customerName'] ?? 'Unknown',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      bookingData['serviceType'] ?? '',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              _buildStatusBadge(bookingData['status'] ?? ''),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on,
+                                  size: 20, color: Colors.grey[600]),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  bookingData['serviceAddress'] ?? '',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today,
+                                  size: 16, color: Colors.grey[600]),
+                              const SizedBox(width: 8),
+                              Text(
+                                _formatDate(
+                                    bookingData['bookingDate'] as Timestamp),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -315,6 +444,48 @@ class BookingsHistoryPage extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    IconData icon;
+    switch (status) {
+      case 'Completed':
+        color = Colors.green;
+        icon = Icons.check_circle;
+        break;
+      case 'Cancelled':
+        color = Colors.red;
+        icon = Icons.cancel;
+        break;
+      case 'Confirmed':
+        color = Colors.blue;
+        icon = Icons.thumb_up;
+        break;
+      default:
+        color = Colors.orange;
+        icon = Icons.schedule;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: TextStyle(color: color, fontWeight: FontWeight.w500),
+          ),
+        ],
       ),
     );
   }

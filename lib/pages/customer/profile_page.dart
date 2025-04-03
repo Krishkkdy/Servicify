@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'bookings_page.dart'; // Add this import
 
 class ProfilePage extends StatefulWidget {
-  // Change to StatefulWidget
   const ProfilePage({super.key});
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -14,14 +14,14 @@ class _ProfilePageState extends State<ProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _mobileController;
-  Map<String, dynamic>? _userData; // Add this to store current user data
+  Map<String, dynamic>? _userData;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
     _mobileController = TextEditingController();
-    _loadUserData(); // Add this
+    _loadUserData();
   }
 
   Future<void> _loadUserData() async {
@@ -39,7 +39,6 @@ class _ProfilePageState extends State<ProfilePage> {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return;
 
-        // Only update fields that have changed
         Map<String, dynamic> updates = {};
         if (_nameController.text != _userData?['name']) {
           updates['name'] = _nameController.text;
@@ -50,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
         if (updates.isNotEmpty) {
           await AuthService().updateCustomerProfile(user.uid, updates);
-          _userData = await AuthService().getUserData(); // Refresh data
+          _userData = await AuthService().getUserData();
         }
 
         setState(() => _isEditing = false);
@@ -186,7 +185,12 @@ class _ProfilePageState extends State<ProfilePage> {
                           title: 'Booking History',
                           subtitle: 'View your past service bookings',
                           onTap: () {
-                            // TODO: Navigate to booking history
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const BookingsPage(),
+                              ),
+                            );
                           },
                         ),
                       ],

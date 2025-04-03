@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io' show Platform;
 
 class ServiceRequestsPage extends StatelessWidget {
   const ServiceRequestsPage({super.key});
@@ -11,6 +12,42 @@ class ServiceRequestsPage extends StatelessWidget {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
     if (await canLaunchUrl(launchUri)) {
       await launchUrl(launchUri);
+    }
+  }
+
+  // Add map navigation functionality
+  Future<void> _openInMaps(String address) async {
+    try {
+      final encodedAddress = Uri.encodeComponent(address);
+      Uri? url;
+
+      if (Platform.isAndroid) {
+        // Use Google Maps intent on Android
+        url = Uri.parse('google.navigation:q=$encodedAddress');
+        if (!await launchUrl(url)) {
+          // Fallback to web URL if intent fails
+          url = Uri.parse(
+              'https://www.google.com/maps/search/?api=1&query=$encodedAddress');
+        }
+      } else if (Platform.isIOS) {
+        // Use Apple Maps on iOS
+        url = Uri.parse('maps://?q=$encodedAddress');
+        if (!await launchUrl(url)) {
+          // Fallback to Google Maps URL
+          url = Uri.parse('comgooglemaps://?q=$encodedAddress');
+        }
+      } else {
+        // Web URL for other platforms
+        url = Uri.parse(
+            'https://www.google.com/maps/search/?api=1&query=$encodedAddress');
+      }
+
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw 'Could not launch maps application';
+      }
+    } catch (e) {
+      debugPrint('Error launching maps: $e');
+      throw 'Could not launch maps';
     }
   }
 
@@ -64,6 +101,11 @@ class ServiceRequestsPage extends StatelessWidget {
                   leading: const Icon(Icons.location_on),
                   title: Text(requestData['serviceAddress'] ?? ''),
                   subtitle: const Text('Service Address'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.map, color: Color(0xFF4E54C8)),
+                    onPressed: () =>
+                        _openInMaps(requestData['serviceAddress'] ?? ''),
+                  ),
                 ),
                 const Divider(),
                 const Text(
@@ -236,8 +278,17 @@ class ServiceRequestsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Service Requests'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Service Requests',
+          style: TextStyle(
+            color: Color(0xFF4E54C8),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -248,50 +299,103 @@ class ServiceRequestsPage extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Something went wrong',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                  ),
+                ],
+              ),
+            );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF4E54C8)),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No pending requests'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: 120,
+                    color: Color(0xFF4E54C8).withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'No pending requests',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'New service requests will appear here',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               final request = snapshot.data!.docs[index];
               final requestData = request.data() as Map<String, dynamic>;
-              // Add requestId to the data for update operations
               requestData['requestId'] = request.id;
 
-              // Get first letter safely
               final String customerName =
                   requestData['customerName'] ?? 'Guest';
               final String customerInitial =
                   customerName.isNotEmpty ? customerName[0] : 'G';
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
                 child: Dismissible(
-                  // Wrap ListTile with Dismissible
                   key: Key(requestData['requestId']),
                   direction: DismissDirection.endToStart,
                   background: Container(
-                    color: Colors.red,
+                    decoration: BoxDecoration(
+                      color: Colors.red[400],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20.0),
+                    padding: const EdgeInsets.only(right: 20),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  onDismissed: (direction) {
-                    _deleteRequest(context, requestData['requestId']);
-                  },
                   confirmDismiss: (direction) async {
                     return await showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         title: const Text('Delete Request?'),
                         content: const Text(
                             'Are you sure you want to remove this request?'),
@@ -310,98 +414,66 @@ class ServiceRequestsPage extends StatelessWidget {
                       ),
                     );
                   },
-                  child: ListTile(
+                  onDismissed: (direction) =>
+                      _deleteRequest(context, requestData['requestId']),
+                  child: InkWell(
                     onTap: () => _showCustomerDetails(context, requestData),
-                    leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF4E54C8),
-                      child: Text(customerInitial),
-                    ),
-                    title: Text(customerName),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                            'Services: ${(requestData['purposes'] as List?)?.join(", ") ?? "No services specified"}'),
-                        Text('Status: ${requestData['status'] ?? "Pending"}'),
-                        Text(
-                            'Location: ${requestData['serviceAddress'] ?? "No address provided"}'),
-                        if (requestData['requestedAt'] != null)
-                          Text(
-                              'Requested: ${_formatDate(requestData['requestedAt'] as Timestamp)}'),
-                      ],
-                    ),
-                    trailing: requestData['status'] == 'Pending Approval'
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              IconButton(
-                                icon: const Icon(Icons.check_circle,
-                                    color: Colors.green),
-                                onPressed: () => _handleRequest(
-                                  context,
-                                  requestData['requestId'],
-                                  requestData['customerId'],
-                                  requestData['bookingId'],
-                                  'Approved',
+                              CircleAvatar(
+                                radius: 25,
+                                backgroundColor: const Color(0xFF4E54C8),
+                                child: Text(
+                                  customerInitial,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                              IconButton(
-                                icon:
-                                    const Icon(Icons.cancel, color: Colors.red),
-                                onPressed: () => _handleRequest(
-                                  context,
-                                  requestData['requestId'],
-                                  requestData['customerId'],
-                                  requestData['bookingId'],
-                                  'Declined',
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      customerName,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      requestData['customerPhone'] ??
+                                          'No phone',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              _buildStatusBadge(
+                                  requestData['status'] ?? 'Pending'),
                             ],
-                          )
-                        : requestData['status'] == 'Approved'
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        Icon(Icons.check_circle,
-                                            color: Colors.green, size: 16),
-                                        SizedBox(width: 4),
-                                        Text('Approved',
-                                            style:
-                                                TextStyle(color: Colors.green)),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.cancel,
-                                        color: Colors.red),
-                                    onPressed: () => _showDeclineConfirmation(
-                                      context,
-                                      requestData['requestId'],
-                                      requestData['customerId'],
-                                      requestData['bookingId'],
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Text('Declined',
-                                    style: TextStyle(color: Colors.red)),
-                              ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildServicesList(requestData['purposes'] as List?),
+                          const Divider(height: 24),
+                          _buildLocationRow(requestData),
+                          if (requestData['status'] == 'Pending Approval')
+                            _buildActionButtons(context, requestData),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -412,12 +484,138 @@ class ServiceRequestsPage extends StatelessWidget {
     );
   }
 
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    IconData icon;
+    switch (status) {
+      case 'Approved':
+        color = Colors.green;
+        icon = Icons.check_circle;
+        break;
+      case 'Declined':
+        color = Colors.red;
+        icon = Icons.cancel;
+        break;
+      default:
+        color = Colors.orange;
+        icon = Icons.schedule;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: TextStyle(color: color, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServicesList(List? services) {
+    if (services == null || services.isEmpty) return const SizedBox();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: services
+          .map((service) => Chip(
+                label: Text(service.toString()),
+                backgroundColor: const Color(0xFF4E54C8).withOpacity(0.1),
+                labelStyle: const TextStyle(color: Color(0xFF4E54C8)),
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildLocationRow(Map<String, dynamic> requestData) {
+    return Row(
+      children: [
+        const Icon(Icons.location_on, size: 20, color: Color(0xFF4E54C8)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            requestData['serviceAddress'] ?? 'No address provided',
+            style: TextStyle(color: Colors.grey[600]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.map, color: Color(0xFF4E54C8)),
+          onPressed: () => _openInMaps(requestData['serviceAddress'] ?? ''),
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          padding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(
+      BuildContext context, Map<String, dynamic> requestData) {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => _handleRequest(
+              context,
+              requestData['requestId'],
+              requestData['customerId'],
+              requestData['bookingId'],
+              'Approved',
+            ),
+            icon: const Icon(Icons.check),
+            label: const Text('Accept'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => _handleRequest(
+              context,
+              requestData['requestId'],
+              requestData['customerId'],
+              requestData['bookingId'],
+              'Declined',
+            ),
+            icon: const Icon(Icons.close),
+            label: const Text('Decline'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   String _formatDate(Timestamp timestamp) {
     final date = timestamp.toDate();
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  // Add this method to show decline confirmation dialog
   Future<void> _showDeclineConfirmation(
     BuildContext context,
     String requestId,
