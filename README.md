@@ -76,25 +76,35 @@ lib/
 
 ## 📸 Screenshots
 
-<div align="center">
-  <div style="display: inline-block; margin: 20px; text-align: center;">
-    <img src="assets/screenshots/login.jpg" alt="Login Screen" width="200"/>
+<div align="center" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px; max-width: 800px; margin: 0 auto;">
+  <div style="text-align: center;">
+    <img src="assets/screenshots/Register.jpg" alt="Register Screen" width="200" style="margin-bottom: 10px;"/>
+    <p><strong>Register Screen</strong></p>
+  </div>
+  
+  <div style="text-align: center;">
+    <img src="assets/screenshots/login.jpg" alt="Login Screen" width="200" style="margin-bottom: 10px;"/>
     <p><strong>Login Screen</strong></p>
   </div>
-
-  <div style="display: inline-block; margin: 20px; text-align: center;">
-    <img src="assets/screenshots/login.jpg" alt="Home Screen" width="200"/>
+  
+  <div style="text-align: center;">
+    <img src="assets/screenshots/home.jpg" alt="Home Screen" width="200" style="margin-bottom: 10px;"/>
     <p><strong>Home Screen</strong></p>
   </div>
-
-  <div style="display: inline-block; margin: 20px; text-align: center;">
-    <img src="assets/screenshots/login.jpg" alt="Service Booking" width="200"/>
-    <p><strong>Service Booking</strong></p>
+  
+  <div style="text-align: center;">
+    <img src="assets/screenshots/Explore.jpg" alt="Explore Screen" width="200" style="margin-bottom: 10px;"/>
+    <p><strong>Explore Screen</strong></p>
   </div>
-
-  <div style="display: inline-block; margin: 20px; text-align: center;">
-    <img src="assets/screenshots/login.jpg" alt="Profile Management" width="200"/>
-    <p><strong>Profile Management</strong></p>
+  
+  <div style="text-align: center;">
+    <img src="assets/screenshots/booking.jpg" alt="Booking Screen" width="200" style="margin-bottom: 10px;"/>
+    <p><strong>Booking Screen</strong></p>
+  </div>
+  
+  <div style="text-align: center;">
+    <img src="assets/screenshots/profile.jpg" alt="Profile Screen" width="200" style="margin-bottom: 10px;"/>
+    <p><strong>Profile Screen</strong></p>
   </div>
 </div>
 
