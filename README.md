@@ -76,7 +76,27 @@ lib/
 
 ## 📸 Screenshots
 
-[Add your app screenshots here]
+<div align="center">
+  <div style="display: inline-block; margin: 20px; text-align: center;">
+    <img src="assets/screenshots/login.jpg" alt="Login Screen" width="200"/>
+    <p><strong>Login Screen</strong></p>
+  </div>
+
+  <div style="display: inline-block; margin: 20px; text-align: center;">
+    <img src="assets/screenshots/login.jpg" alt="Home Screen" width="200"/>
+    <p><strong>Home Screen</strong></p>
+  </div>
+
+  <div style="display: inline-block; margin: 20px; text-align: center;">
+    <img src="assets/screenshots/login.jpg" alt="Service Booking" width="200"/>
+    <p><strong>Service Booking</strong></p>
+  </div>
+
+  <div style="display: inline-block; margin: 20px; text-align: center;">
+    <img src="assets/screenshots/login.jpg" alt="Profile Management" width="200"/>
+    <p><strong>Profile Management</strong></p>
+  </div>
+</div>
 
 ## 🤝 Contributing
 
