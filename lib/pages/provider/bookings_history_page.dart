@@ -135,6 +135,13 @@ class BookingsHistoryPage extends StatelessWidget {
                   title: Text(bookingData['serviceAddress'] ?? ''),
                   subtitle: const Text('Service Address'),
                 ),
+                if (bookingData['scheduledDateTime'] != null)
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today),
+                    title: Text(_formatScheduledDateTime(
+                        bookingData['scheduledDateTime'])),
+                    subtitle: const Text('Scheduled Date & Time'),
+                  ),
                 ListTile(
                   leading: const Icon(Icons.handyman),
                   title: Text(bookingData['serviceType'] ?? ''),
@@ -202,6 +209,11 @@ class BookingsHistoryPage extends StatelessWidget {
   String _formatDate(Timestamp timestamp) {
     final date = timestamp.toDate();
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatScheduledDateTime(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   Color _getStatusColor(String status) {
@@ -426,8 +438,11 @@ class BookingsHistoryPage extends StatelessWidget {
                                   size: 16, color: Colors.grey[600]),
                               const SizedBox(width: 8),
                               Text(
-                                _formatDate(
-                                    bookingData['bookingDate'] as Timestamp),
+                                bookingData['scheduledDateTime'] != null
+                                    ? _formatScheduledDateTime(
+                                        bookingData['scheduledDateTime'])
+                                    : _formatDate(bookingData['bookingDate']
+                                        as Timestamp),
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,

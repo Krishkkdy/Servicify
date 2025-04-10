@@ -107,6 +107,13 @@ class ServiceRequestsPage extends StatelessWidget {
                         _openInMaps(requestData['serviceAddress'] ?? ''),
                   ),
                 ),
+                if (requestData['scheduledDateTime'] != null)
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today),
+                    title: Text(_formatScheduledDateTime(
+                        requestData['scheduledDateTime'])),
+                    subtitle: const Text('Scheduled Date & Time'),
+                  ),
                 const Divider(),
                 const Text(
                   'Requested Services:',
@@ -645,5 +652,10 @@ class ServiceRequestsPage extends StatelessWidget {
       await _handleRequest(
           context, requestId, customerId, bookingId, 'Declined');
     }
+  }
+
+  String _formatScheduledDateTime(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

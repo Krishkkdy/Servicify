@@ -189,11 +189,12 @@ class _BookingsPageState extends State<BookingsPage> {
   void _showProviderDetails(
       BuildContext context, Map<String, dynamic> bookingData) async {
     final TextEditingController addressController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
 
     // Get current address
     String currentAddress = await _getCurrentAddress();
     addressController.text = currentAddress;
-
     List<String> selectedPurposes = [];
 
     final providerDoc = await FirebaseFirestore.instance
@@ -222,164 +223,270 @@ class _BookingsPageState extends State<BookingsPage> {
       ),
       builder: (context) => StatefulBuilder(
         // Add StatefulBuilder for checkboxes
-        builder: (context, setState) => DraggableScrollableSheet(
+        builder: (context, setModalState) => DraggableScrollableSheet(
           initialChildSize: 0.8, // Increased to show more content
           minChildSize: 0.5,
           maxChildSize: 0.95,
           expand: false,
-          builder: (context, scrollController) => SingleChildScrollView(
-            controller: scrollController,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    providerData['businessName'] ?? '',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Provider: ${providerData['name']}'),
-                      IconButton(
-                        icon: const Icon(Icons.phone, color: Colors.green),
-                        onPressed: () =>
-                            _makePhoneCall(providerData['mobileNumber']),
+          builder: (context, scrollController) {
+            // Add date picker function within the builder
+            Future<void> _selectDate(BuildContext context) async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: selectedDate,
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 30)),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: const ColorScheme.light(
+                        primary: Color(0xFF4E54C8),
+                        onPrimary: Colors.white,
                       ),
-                    ],
-                  ),
-                  Text('Mobile: ${providerData['mobileNumber']}'),
-                  Text('Booking Status: ${bookingData['status']}'),
-                  Text(
-                      'Booking Date: ${_formatDate(bookingData['bookingDate'] as Timestamp)}'),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Services Offered:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    children: List<String>.from(providerData['services'] ?? [])
-                        .map((service) => Chip(label: Text(service)))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber),
+                    child: child!,
+                  );
+                },
+              );
+              if (picked != null && picked != selectedDate) {
+                setModalState(() {
+                  selectedDate = picked;
+                });
+              }
+            }
+
+            // Add time picker function within the builder
+            Future<void> _selectTime(BuildContext context) async {
+              final TimeOfDay? picked = await showTimePicker(
+                context: context,
+                initialTime: selectedTime,
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: const ColorScheme.light(
+                        primary: Color(0xFF4E54C8),
+                        onPrimary: Colors.white,
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (picked != null && picked != selectedTime) {
+                setModalState(() {
+                  selectedTime = picked;
+                });
+              }
+            }
+
+            return SingleChildScrollView(
+              controller: scrollController,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      providerData['businessName'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Provider: ${providerData['name']}'),
+                        IconButton(
+                          icon: const Icon(Icons.phone, color: Colors.green),
+                          onPressed: () =>
+                              _makePhoneCall(providerData['mobileNumber']),
+                        ),
+                      ],
+                    ),
+                    Text('Mobile: ${providerData['mobileNumber']}'),
+                    Text('Booking Status: ${bookingData['status']}'),
+                    Text(
+                        'Booking Date: ${_formatDate(bookingData['bookingDate'] as Timestamp)}'),
+                    if (bookingData['scheduledDateTime'] != null)
                       Text(
-                          ' ${providerData['rating']?.toStringAsFixed(1) ?? '0.0'}'),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  if (bookingData['status'] == 'Pending') ...[
-                    TextField(
-                      controller: addressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Service Address',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_on),
+                        'Scheduled Date & Time: ${_formatScheduledDateTime(bookingData['scheduledDateTime'])}',
                       ),
-                      maxLines: 3,
-                    ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Select Service Type:',
+                      'Services Offered:',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    ...providerServices.map((service) => CheckboxListTile(
-                          title: Text(service),
-                          value: selectedPurposes.contains(service),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value == true) {
-                                selectedPurposes.add(service);
-                              } else {
-                                selectedPurposes.remove(service);
-                              }
-                            });
-                          },
-                        )),
-                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      children:
+                          List<String>.from(providerData['services'] ?? [])
+                              .map((service) => Chip(label: Text(service)))
+                              .toList(),
+                    ),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            onPressed: () {
-                              if (addressController.text.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text('Please enter service address')),
-                                );
-                                return;
-                              }
-                              if (selectedPurposes.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Please select at least one purpose')),
-                                );
-                                return;
-                              }
-                              _updateBookingStatus(
-                                context,
-                                bookingData['id'],
-                                'Request Sent', // Changed from 'Confirmed'
-                                addressController.text,
-                                selectedPurposes,
-                              );
-                            },
-                            child: const Text(
-                              'Confirm Booking',
-                              style:
-                                  TextStyle(fontSize: 16, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            onPressed: () => _updateBookingStatus(
-                              context,
-                              bookingData['id'],
-                              'Cancelled',
-                              null,
-                              null,
-                            ),
-                            child: const Text(
-                              'Cancel Booking',
-                              style:
-                                  TextStyle(fontSize: 16, color: Colors.white),
-                            ),
-                          ),
-                        ),
+                        const Icon(Icons.star, color: Colors.amber),
+                        Text(
+                            ' ${providerData['rating']?.toStringAsFixed(1) ?? '0.0'}'),
                       ],
                     ),
+                    const SizedBox(height: 24),
+                    if (bookingData['status'] == 'Pending') ...[
+                      TextField(
+                        controller: addressController,
+                        decoration: const InputDecoration(
+                          labelText: 'Service Address',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.location_on),
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectDate(context),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Select Date',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.calendar_today),
+                                ),
+                                child: Text(
+                                  '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectTime(context),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Select Time',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.access_time),
+                                ),
+                                child: Text(
+                                  selectedTime.format(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Select Service Type:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      ...providerServices.map((service) => CheckboxListTile(
+                            title: Text(service),
+                            value: selectedPurposes.contains(service),
+                            onChanged: (bool? value) {
+                              setModalState(() {
+                                if (value == true) {
+                                  selectedPurposes.add(service);
+                                } else {
+                                  selectedPurposes.remove(service);
+                                }
+                              });
+                            },
+                          )),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              onPressed: () {
+                                if (addressController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Please enter service address')),
+                                  );
+                                  return;
+                                }
+                                if (selectedPurposes.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Please select at least one purpose')),
+                                  );
+                                  return;
+                                }
+
+                                // Create DateTime object combining date and time
+                                final DateTime scheduledDateTime = DateTime(
+                                  selectedDate.year,
+                                  selectedDate.month,
+                                  selectedDate.day,
+                                  selectedTime.hour,
+                                  selectedTime.minute,
+                                );
+
+                                _updateBookingStatus(
+                                  context,
+                                  bookingData['id'],
+                                  'Request Sent', // Changed from 'Confirmed'
+                                  addressController.text,
+                                  selectedPurposes,
+                                  scheduledDateTime, // Add this parameter
+                                );
+                              },
+                              child: const Text(
+                                'Confirm Booking',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              onPressed: () => _updateBookingStatus(
+                                context,
+                                bookingData['id'],
+                                'Cancelled',
+                                null,
+                                null,
+                              ),
+                              child: const Text(
+                                'Cancel Booking',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -390,9 +497,16 @@ class _BookingsPageState extends State<BookingsPage> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
+  String _formatScheduledDateTime(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _updateBookingStatus(
       BuildContext context, String bookingId, String status,
-      [String? address, List<String>? purposes]) async {
+      [String? address,
+      List<String>? purposes,
+      DateTime? scheduledDateTime]) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) return;
@@ -422,6 +536,7 @@ class _BookingsPageState extends State<BookingsPage> {
         updateData.addAll({
           'serviceAddress': address,
           'purposes': purposes,
+          'scheduledDateTime': scheduledDateTime, // Add this
           'confirmedAt': Timestamp.now(),
         });
 
@@ -443,6 +558,7 @@ class _BookingsPageState extends State<BookingsPage> {
               'Pending Approval', // This stays as 'Pending Approval' for provider
           'requestedAt': Timestamp.now(),
           'serviceType': bookingData['serviceType'],
+          'scheduledDateTime': scheduledDateTime, // Add this
         });
       }
 
@@ -678,6 +794,12 @@ class _BookingsPageState extends State<BookingsPage> {
   }
 }
 
+// Add this as a static method in BookingCard class or make it top-level function
+String formatScheduledDateTime(Timestamp timestamp) {
+  final date = timestamp.toDate();
+  return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+}
+
 // Update BookingCard class
 class BookingCard extends StatelessWidget {
   final String serviceProvider;
@@ -781,7 +903,10 @@ class BookingCard extends StatelessWidget {
                                 size: 16, color: AppTheme.subtitleColor),
                             const SizedBox(width: 4),
                             Text(
-                              '${bookingDate.day}/${bookingDate.month}/${bookingDate.year}',
+                              bookingData?['scheduledDateTime'] != null
+                                  ? formatScheduledDateTime(
+                                      bookingData!['scheduledDateTime'])
+                                  : '${bookingDate.day}/${bookingDate.month}/${bookingDate.year}',
                               style: const TextStyle(
                                 color: AppTheme.subtitleColor,
                                 fontSize: 14,
