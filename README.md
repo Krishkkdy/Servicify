@@ -30,10 +30,10 @@
     <td>Provider Dashboard</td>
   </tr>
   <tr>
-    <td><img src="screenshots/login.png" width="200"/></td>
-    <td><img src="screenshots/home.png" width="200"/></td>
-    <td><img src="screenshots/booking.png" width="200"/></td>
-    <td><img src="screenshots/provider.png" width="200"/></td>
+    <td><img src="screenshots/login.jpg" width="200"/></td>
+    <td><img src="screenshots/home.jpg" width="200"/></td>
+    <td><img src="screenshots/booking.jpg" width="200"/></td>
+    <td><img src="screenshots/provider.jpg" width="200"/></td>
   </tr>
 </table>
 
@@ -106,7 +106,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- **Your Name** - *Initial work* - [YourGithub](https://github.com/yourusername)
+- **Krish Kakadiya** - [YourGithub](https://github.com/krishkkdy)
 
 ## 🙏 Acknowledgments
 
