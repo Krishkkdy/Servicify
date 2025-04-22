@@ -5,6 +5,7 @@ import 'signup_page.dart';
 import '../services/auth_service.dart';
 import 'customer_home_page.dart';
 import 'provider_home_page.dart';
+import '../components/forgot_password_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -54,6 +55,13 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const ForgotPasswordDialog(),
+    );
   }
 
   @override
@@ -158,7 +166,22 @@ class _LoginPageState extends State<LoginPage> {
                         isPassword: true, // Add this line
                       ),
 
-                      const SizedBox(height: 25),
+                      // Add Forgot Password link
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _showForgotPasswordDialog,
+                          child: const Text(
+                            'Forgot Password?',
+                            style: TextStyle(
+                              color: Color(0xFF4E54C8),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
 
                       // sign in button
                       MyButton(

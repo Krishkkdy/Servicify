@@ -252,6 +252,48 @@ class AuthService {
     }
   }
 
+  Future<bool> updatePassword(String currentPassword, String newPassword) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      // Reauthenticate user first
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(cred);
+      
+      // Update password
+      await user.updatePassword(newPassword);
+      return true;
+    } catch (e) {
+      print('Error updating password: $e');
+      return false;
+    }
+  }
+
+  // Add this new method for password reset
+  Future<bool> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      print('Error sending password reset email: ${e.code} - ${e.message}');
+      switch (e.code) {
+        case 'user-not-found':
+          throw 'No user found with this email address';
+        case 'invalid-email':
+          throw 'Invalid email address';
+        default:
+          throw 'Failed to send reset email: ${e.message}';
+      }
+    } catch (e) {
+      print('Error sending password reset email: $e');
+      throw 'An unexpected error occurred';
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     await _auth.signOut();

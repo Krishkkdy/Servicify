@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'bookings_page.dart'; // Add this import
 import '../../utils/app_theme.dart';
 import 'package:provider/provider.dart';
+import '/components/change_password_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -85,6 +86,18 @@ class _ProfilePageState extends State<ProfilePage> {
               )
             : null,
         actions: [
+          if (_isEditing)
+            IconButton(
+              icon: const Icon(Icons.key),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => ChangePasswordDialog(
+                    onSuccess: () => setState(() {}),
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon: Icon(_isEditing ? Icons.save : Icons.edit),
             onPressed: () {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '/components/change_password_dialog.dart';
 
 class ProviderProfilePage extends StatefulWidget {
   const ProviderProfilePage({super.key});
@@ -80,6 +81,18 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
               )
             : null,
         actions: [
+          if (_isEditing)
+            IconButton(
+              icon: const Icon(Icons.key),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => ChangePasswordDialog(
+                    onSuccess: () => setState(() {}),
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon:
                 Icon(_isEditing ? Icons.save : Icons.edit, color: Colors.white),
