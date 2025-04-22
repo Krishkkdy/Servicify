@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/components/change_password_dialog.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProviderProfilePage extends StatefulWidget {
   const ProviderProfilePage({super.key});
@@ -17,6 +21,8 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
   late TextEditingController _mobileController;
   late TextEditingController _locationController;
   List<String> selectedServices = [];
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -25,6 +31,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
     _businessNameController = TextEditingController();
     _mobileController = TextEditingController();
     _locationController = TextEditingController();
+    _loadProfileImage();
   }
 
   @override
@@ -63,6 +70,90 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
         );
       }
     }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+      if (pickedFile == null) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+
+        await AuthService().updateProviderProfile(user.uid, {
+          'profileImage': pickedFile.path,
+        });
+
+        final userData = await AuthService().getUserData();
+        if (userData != null && userData['profileImage'] != null) {
+          final File imageFile = File(userData['profileImage']);
+          if (await imageFile.exists()) {
+            setState(() {
+              _imageFile = imageFile;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Error updating profile picture: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _loadProfileImage() async {
+    try {
+      final userData = await AuthService().getUserData();
+      if (userData != null && userData['profileImage'] != null) {
+        final String imagePath = userData['profileImage'];
+        final File imageFile = File(imagePath);
+
+        if (await imageFile.exists()) {
+          setState(() {
+            _imageFile = imageFile;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+    }
+  }
+
+  void _showImagePickerModal() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -113,7 +204,6 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
                   context, '/login', (route) => false);
             },
           ),
- 
         ],
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
@@ -181,7 +271,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color.fromARGB(148, 183, 180, 255),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -194,10 +284,73 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const CircleAvatar(
-                radius: 50,
-                backgroundColor: Color(0xFF4E54C8),
-                child: Icon(Icons.business, size: 50, color: Colors.white),
+              GestureDetector(
+                onTap: _isEditing ? _showImagePickerModal : null,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: const Color(0xFF4E54C8).withOpacity(0.1),
+                      backgroundImage: _imageFile != null
+                          ? FileImage(_imageFile!) as ImageProvider
+                          : null,
+                      child: _imageFile == null
+                          ? const Icon(
+                              Icons.person_outline,
+                              size: 50,
+                              color: Color(0xFF4E54C8),
+                            )
+                          : null,
+                    ),
+                    if (_isEditing)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4E54C8),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    if (_isEditing && _imageFile != null)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _imageFile = null;
+                            });
+                            final user = FirebaseAuth.instance.currentUser;
+                            if (user != null) {
+                              AuthService().updateProviderProfile(user.uid, {
+                                'profileImage': '',
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -219,21 +372,6 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
             ],
           ),
         ),
-        if (_isEditing)
-          Positioned(
-            right: 20,
-            bottom: 20,
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              radius: 18,
-              child: IconButton(
-                icon: const Icon(Icons.camera_alt, size: 18),
-                onPressed: () {
-                  // TODO: Implement image picker
-                },
-              ),
-            ),
-          ),
       ],
     );
   }

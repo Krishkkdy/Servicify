@@ -5,6 +5,10 @@ import 'bookings_page.dart'; // Add this import
 import '../../utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import '/components/change_password_dialog.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,13 +22,15 @@ class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _mobileController;
   Map<String, dynamic>? _userData;
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
     _mobileController = TextEditingController();
-    _loadUserData();
+    _loadUserData().then((_) => _loadProfileImage());
   }
 
   Future<void> _loadUserData() async {
@@ -34,6 +40,37 @@ class _ProfilePageState extends State<ProfilePage> {
       _mobileController.text = _userData!['mobileNumber'] ?? '';
     }
     if (mounted) setState(() {});
+  }
+
+  Future<void> _loadProfileImage() async {
+    try {
+      if (_userData != null && _userData!['profileImage'] != null) {
+        final String imagePath = _userData!['profileImage'];
+        final File imageFile = File(imagePath);
+
+        if (await imageFile.exists()) {
+          if (mounted) {
+            setState(() {
+              _imageFile = imageFile;
+            });
+          }
+        } else {
+          print('Profile image not found at path: $imagePath');
+          if (mounted) {
+            setState(() {
+              _imageFile = null;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+      if (mounted) {
+        setState(() {
+          _imageFile = null;
+        });
+      }
+    }
   }
 
   Future<void> _updateProfile() async {
@@ -68,6 +105,86 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Show loading indicator
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+
+      try {
+        await AuthService().updateCustomerProfile(user.uid, {
+          'profileImage': pickedFile.path,
+        });
+
+        // Fetch updated data with new image path
+        final updatedData = await AuthService().getUserData();
+        if (updatedData != null && updatedData['profileImage'] != null) {
+          final File newImageFile = File(updatedData['profileImage']);
+          if (await newImageFile.exists()) {
+            setState(() {
+              _imageFile = newImageFile;
+              _userData = updatedData;
+            });
+          }
+        }
+      } catch (e) {
+        setState(() {
+          _imageFile = null;
+        });
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update profile picture')),
+        );
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error selecting image')),
+      );
+    }
+  }
+
+  void _showImagePickerModal() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -143,58 +260,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Column(
                       children: [
                         const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Personal Information',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.primaryColor,
-                                    ),
-                              ),
-                              const SizedBox(height: 20),
-                              _buildInfoField(
-                                icon: Icons.person,
-                                label: 'Name',
-                                value: _userData!['name'] ?? '',
-                                controller: _nameController,
-                                isEditing: _isEditing,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildInfoField(
-                                icon: Icons.phone,
-                                label: 'Mobile Number',
-                                value: _userData!['mobileNumber'] ?? '',
-                                controller: _mobileController,
-                                isEditing: _isEditing,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildInfoField(
-                                icon: Icons.email,
-                                label: 'Email',
-                                value: _userData!['email'] ?? '',
-                                isEditing: false,
-                              ),
-                            ],
-                          ),
-                        ),
+                        _buildProfileHeader(_userData!),
+                        const SizedBox(height: 20),
+                        _buildPersonalInfo(_userData!),
                         const SizedBox(height: 20),
                         _buildActionCard(
                           icon: Icons.history,
@@ -215,6 +283,169 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildProfileHeader(Map<String, dynamic> userData) {
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(148, 183, 180, 255),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: _isEditing ? _showImagePickerModal : null,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                      backgroundImage: _imageFile != null
+                          ? FileImage(_imageFile!) as ImageProvider
+                          : null,
+                      child: _imageFile == null
+                          ? const Icon(
+                              Icons.person_outline,
+                              size: 50,
+                              color: Color(0xFF4E54C8),
+                            )
+                          : null,
+                    ),
+                    if (_isEditing)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    if (_isEditing && _imageFile != null)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _imageFile = null;
+                            });
+                            final user = FirebaseAuth.instance.currentUser;
+                            if (user != null) {
+                              AuthService().updateCustomerProfile(user.uid, {
+                                'profileImage': '',
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                userData['name'] ?? 'Your Name',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4E54C8),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                userData['email'] ?? 'Email',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPersonalInfo(Map<String, dynamic> userData) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Personal Information',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryColor,
+                ),
+          ),
+          const SizedBox(height: 20),
+          _buildInfoField(
+            icon: Icons.person,
+            label: 'Name',
+            value: userData['name'] ?? '',
+            controller: _nameController,
+            isEditing: _isEditing,
+          ),
+          const SizedBox(height: 16),
+          _buildInfoField(
+            icon: Icons.phone,
+            label: 'Mobile Number',
+            value: userData['mobileNumber'] ?? '',
+            controller: _mobileController,
+            isEditing: _isEditing,
+          ),
+          const SizedBox(height: 16),
+          _buildInfoField(
+            icon: Icons.email,
+            label: 'Email',
+            value: userData['email'] ?? '',
+            isEditing: false,
+          ),
+        ],
+      ),
     );
   }
 

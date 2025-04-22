@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -146,11 +148,38 @@ class AuthService {
     }
   }
 
-  // Add these new methods
   Future<void> updateCustomerProfile(
       String userId, Map<String, dynamic> data) async {
     try {
-      // First update customer collection
+      if (data['profileImage'] != null) {
+        final File imageFile = File(data['profileImage']);
+        if (await imageFile.exists()) {
+          final Directory appDir = await getApplicationDocumentsDirectory();
+          // Use a consistent file name format
+          final String permanentDirPath = '${appDir.path}/profiles';
+          final String permanentPath = '$permanentDirPath/customer_$userId.jpg';
+
+          await Directory(permanentDirPath).create(recursive: true);
+
+          if (data['profileImage'] != permanentPath) {
+            // Remove old image if exists
+            final File oldImage = File(permanentPath);
+            if (await oldImage.exists()) {
+              await oldImage.delete();
+            }
+
+            // Copy new image with overwrite mode
+            await imageFile.copy(permanentPath).then((File copiedFile) async {
+              // Verify the copy was successful
+              if (await copiedFile.exists()) {
+                data['profileImage'] = permanentPath;
+              }
+            });
+          }
+        }
+      }
+
+      // Rest of the update logic
       final docRef = _firestore.collection('customers').doc(userId);
       final userDoc = await docRef.get();
 
@@ -209,7 +238,38 @@ class AuthService {
   Future<void> updateProviderProfile(
       String userId, Map<String, dynamic> data) async {
     try {
-      // Update service provider collection
+      // Handle profile image before updating
+      if (data['profileImage'] != null) {
+        final File imageFile = File(data['profileImage']);
+        if (await imageFile.exists()) {
+          final Directory appDir = await getApplicationDocumentsDirectory();
+          final String permanentPath =
+              '${appDir.path}/profiles/provider_$userId.jpg';
+
+          // Ensure directory exists
+          final Directory profileDir = Directory('${appDir.path}/profiles');
+          if (!await profileDir.exists()) {
+            await profileDir.create(recursive: true);
+          }
+
+          // Only copy if it's a new image
+          if (data['profileImage'] != permanentPath) {
+            // Delete old image if it exists
+            final File oldImage = File(permanentPath);
+            if (await oldImage.exists()) {
+              await oldImage.delete();
+            }
+
+            // Copy new image
+            await imageFile.copy(permanentPath);
+          }
+
+          // Update the path in data
+          data['profileImage'] = permanentPath;
+        }
+      }
+
+      // Rest of the update logic
       await _firestore.collection('serviceProviders').doc(userId).update(data);
 
       // Update users collection
@@ -252,7 +312,8 @@ class AuthService {
     }
   }
 
-  Future<bool> updatePassword(String currentPassword, String newPassword) async {
+  Future<bool> updatePassword(
+      String currentPassword, String newPassword) async {
     try {
       final user = _auth.currentUser;
       if (user == null) return false;
@@ -263,7 +324,7 @@ class AuthService {
         password: currentPassword,
       );
       await user.reauthenticateWithCredential(cred);
-      
+
       // Update password
       await user.updatePassword(newPassword);
       return true;

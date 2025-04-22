@@ -77,6 +77,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                 _errorMessage!,
                 style: const TextStyle(color: Colors.red),
               ),
+            const SizedBox(height: 20),
             TextField(
               controller: _currentPasswordController,
               obscureText: !_currentPasswordVisible,
