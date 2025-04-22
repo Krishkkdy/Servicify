@@ -150,10 +150,22 @@ class _BookingsPageState extends State<BookingsPage> {
       scheme: 'tel',
       path: phoneNumber,
     );
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    } else {
-      throw 'Could not launch $launchUri';
+    try {
+      if (!await launchUrl(launchUri, mode: LaunchMode.externalApplication)) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not launch phone app. Please try again.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to make call. Please check phone permissions.'),
+        ),
+      );
     }
   }
 
