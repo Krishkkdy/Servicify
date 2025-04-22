@@ -37,11 +37,7 @@ class _MyTextFieldState extends State<MyTextField> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _isFocused ? const Color(0xFF4E54C8) : Colors.transparent,
-            width: 2,
-          ),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: _isFocused

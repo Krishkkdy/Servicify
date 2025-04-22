@@ -237,7 +237,8 @@ class _SignUpPageState extends State<SignUpPage> {
                             ],
                           ),
                           child: const Icon(
-                            Icons.person_add,
+                            Icons
+                                .account_circle, // Change from Icons.person_add to Icons.account_circle
                             size: 80,
                             color: Color(0xFF4E54C8),
                           ),

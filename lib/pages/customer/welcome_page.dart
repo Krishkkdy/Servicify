@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../utils/app_theme.dart';
 
 class CustomerWelcomePage extends StatefulWidget {
   final Function(int) onNavigate; // Add this
@@ -188,7 +189,7 @@ class _CustomerWelcomePageState extends State<CustomerWelcomePage>
                                   widget.onNavigate(1); // Update this line
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4E54C8),
+                                  backgroundColor: AppTheme.primaryColor,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 32,
                                     vertical: 16,

@@ -39,28 +39,59 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
+        elevation: 2,
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Colors.grey.shade200),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryColor),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: primaryColor),
       ),
       contentPadding: const EdgeInsets.all(16),
+    ),
+    textTheme: TextTheme(
+      titleLarge: TextStyle(
+        color: textColor,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
+      titleMedium: TextStyle(
+        color: textColor,
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
+      bodyLarge: TextStyle(
+        color: textColor,
+        fontSize: 16,
+      ),
+      bodyMedium: TextStyle(
+        color: subtitleColor,
+        fontSize: 14,
+      ),
+    ),
+    colorScheme: ColorScheme.light(
+      primary: primaryColor,
+      secondary: secondaryColor,
+      surface: cardColor,
+      background: backgroundColor,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
+      onSurface: textColor,
+      onBackground: textColor,
     ),
   );
 }

@@ -240,7 +240,7 @@ class _BookingsPageState extends State<BookingsPage> {
                   return Theme(
                     data: Theme.of(context).copyWith(
                       colorScheme: const ColorScheme.light(
-                        primary: Color(0xFF4E54C8),
+                        primary: AppTheme.primaryColor,
                         onPrimary: Colors.white,
                       ),
                     ),
@@ -264,7 +264,7 @@ class _BookingsPageState extends State<BookingsPage> {
                   return Theme(
                     data: Theme.of(context).copyWith(
                       colorScheme: const ColorScheme.light(
-                        primary: Color(0xFF4E54C8),
+                        primary: AppTheme.primaryColor,
                         onPrimary: Colors.white,
                       ),
                     ),
@@ -659,7 +659,7 @@ class _BookingsPageState extends State<BookingsPage> {
       appBar: AppBar(
         title: const Text('Booking History'),
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF4E54C8),
+        foregroundColor: AppTheme.primaryColor,
         elevation: 0,
       ),
       body: RefreshIndicator(
@@ -695,7 +695,7 @@ class _BookingsPageState extends State<BookingsPage> {
 
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF4E54C8)),
+                child: CircularProgressIndicator(color: AppTheme.primaryColor),
               );
             }
 
@@ -707,7 +707,7 @@ class _BookingsPageState extends State<BookingsPage> {
                     Icon(
                       Icons.history_outlined,
                       size: 120,
-                      color: const Color(0xFF4E54C8).withOpacity(0.3),
+                      color: AppTheme.primaryColor.withOpacity(0.3),
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -829,145 +829,212 @@ class BookingCard extends StatelessWidget {
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 100), // Add min height
-        decoration: AppTheme.cardDecoration.copyWith(
+        constraints: const BoxConstraints(minHeight: 120, maxHeight: 220),
+        decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 6,
-              offset: const Offset(0, 3),
+              color: AppTheme.primaryColor.withOpacity(0.08),
+              spreadRadius: 2,
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(20),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: onTap,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 25,
-                          backgroundColor: AppTheme.primaryColor,
-                          child: Text(
-                            serviceProvider.isNotEmpty
-                                ? serviceProvider[0]
-                                : '?',
-                            style: const TextStyle(
-                              color: AppTheme.cardColor,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                serviceProvider,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textColor,
-                                ),
-                              ),
-                              Text(
-                                serviceType,
-                                style: const TextStyle(
-                                  color: AppTheme.subtitleColor,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+              child: Stack(
+                children: [
+                  // Status indicator line
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 4,
+                    child: Container(
+                      color: _getStatusColor(status),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.calendar_today,
-                                size: 16, color: AppTheme.subtitleColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              bookingData?['scheduledDateTime'] != null
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                _getServiceIcon(serviceType),
+                                color: AppTheme.primaryColor,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    serviceProvider,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    serviceType,
+                                    style: const TextStyle(
+                                      color: AppTheme.subtitleColor,
+                                      fontSize: 14,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _buildStatusBadge(status),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            _buildInfoChip(
+                              icon: Icons.calendar_today,
+                              text: bookingData?['scheduledDateTime'] != null
                                   ? formatScheduledDateTime(
                                       bookingData!['scheduledDateTime'])
                                   : '${bookingDate.day}/${bookingDate.month}/${bookingDate.year}',
-                              style: const TextStyle(
-                                color: AppTheme.subtitleColor,
-                                fontSize: 14,
-                              ),
                             ),
+                            if (bookingData?['serviceAddress'] != null) ...[
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildInfoChip(
+                                  icon: Icons.location_on,
+                                  text: bookingData!['serviceAddress'],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                        _buildStatusBadge(status),
-                      ],
-                    ),
-                    // Add cancel button if status is Pending or Request Sent
-                    if (status == 'Pending' || status == 'Request Sent')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton.icon(
-                              icon: const Icon(Icons.cancel_outlined,
-                                  color: Colors.red),
-                              label: const Text('Cancel Booking'),
-                              onPressed: () => _showCancelConfirmation(context),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    // Rating button for completed bookings
-                    if (status == 'Completed' &&
-                        bookingData != null &&
-                        !(bookingData!['rated'] ?? false))
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.star, size: 20),
-                          label: const Text('Rate Service'),
-                          onPressed: () =>
-                              onRateService?.call(context, bookingData!),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.amber,
-                            side: const BorderSide(color: Colors.amber),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                        // Action buttons with modern styling
+                        if (status == 'Completed' &&
+                            bookingData != null &&
+                            !(bookingData!['rated'] ?? false))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.star,
+                                      color: Colors.amber),
+                                  label: const Text('Rate Service'),
+                                  onPressed: () => onRateService?.call(
+                                      context, bookingData!),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.amber,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ),
-                  ],
-                ),
+                        if (status == 'Pending' || status == 'Request Sent')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.cancel_outlined,
+                                      color: Colors.red),
+                                  label: const Text('Cancel'),
+                                  onPressed: () =>
+                                      _showCancelConfirmation(context),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildInfoChip({required IconData icon, required String text}) {
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppTheme.subtitleColor),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: AppTheme.subtitleColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getServiceIcon(String serviceType) {
+    if (serviceType.toLowerCase().contains('clean'))
+      return Icons.cleaning_services;
+    if (serviceType.toLowerCase().contains('plumb')) return Icons.plumbing;
+    if (serviceType.toLowerCase().contains('electric'))
+      return Icons.electrical_services;
+    if (serviceType.toLowerCase().contains('paint')) return Icons.format_paint;
+    if (serviceType.toLowerCase().contains('garden')) return Icons.grass;
+    if (serviceType.toLowerCase().contains('move')) return Icons.local_shipping;
+    return Icons.handyman;
   }
 
   // Add this method to show cancel confirmation dialog

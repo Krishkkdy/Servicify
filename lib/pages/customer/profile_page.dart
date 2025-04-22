@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'bookings_page.dart'; // Add this import
+import '../../utils/app_theme.dart';
+import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -102,6 +104,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   context, '/login', (route) => false);
             },
           ),
+          // Add this in any widget where you want to toggle the theme
         ],
       ),
       body: _userData == null
@@ -112,8 +115,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFF4E54C8).withOpacity(0.8),
-                    const Color(0xFF4E54C8).withOpacity(0.6),
+                    AppTheme.primaryColor.withOpacity(0.8),
+                    AppTheme.secondaryColor.withOpacity(0.6),
                     Colors.white,
                   ],
                   stops: const [0.0, 0.2, 0.4],
@@ -150,7 +153,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     .titleLarge
                                     ?.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF4E54C8),
+                                      color: AppTheme.primaryColor,
                                     ),
                               ),
                               const SizedBox(height: 20),

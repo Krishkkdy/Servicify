@@ -68,8 +68,8 @@ class _LoginPageState extends State<LoginPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF4E54C8),
-              const Color(0xFF4E54C8).withOpacity(0.8),
+              const Color(0xFF6C63FF), // Updated primary color
+              const Color(0xFF3F3D9B), // Updated secondary color
               Colors.white,
             ],
             stops: const [0.0, 0.5, 0.9],
@@ -103,7 +103,8 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                         child: const Icon(
-                          Icons.lock,
+                          Icons
+                              .person_outline, // Change from Icons.lock to Icons.person_outline
                           size: 80,
                           color: Color(0xFF4E54C8),
                         ),
@@ -157,7 +158,6 @@ class _LoginPageState extends State<LoginPage> {
                         isPassword: true, // Add this line
                       ),
 
-                    
                       const SizedBox(height: 25),
 
                       // sign in button

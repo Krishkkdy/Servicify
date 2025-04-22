@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../utils/app_theme.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -182,7 +183,7 @@ class _ExplorePageState extends State<ExplorePage>
             : Text(
                 selectedCategory ?? 'Explore Services',
                 style: const TextStyle(
-                  color: Color(0xFF4E54C8),
+                  color: AppTheme.primaryColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -427,7 +428,7 @@ class _ExplorePageState extends State<ExplorePage>
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4E54C8),
+                      backgroundColor: AppTheme.primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     onPressed: () => _addToBookings(provider),
